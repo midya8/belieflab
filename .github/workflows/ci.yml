@@ -37,3 +37,6 @@ jobs:
       - run: python -m belieflab evaluate-policy examples/sensing.json --belief '[[1,2],[1,2]]' --policy examples/probe-policy.json > /tmp/evaluate-policy.json
       - run: python -m belieflab audit-policy examples/sensing.json --belief '[[1,2],[1,2]]' --policy examples/probe-policy.json > /tmp/audit-policy.json
       - run: PYTHONPATH=. python examples/render_policy.py --check
+      - run: python -m belieflab residual-demo > /tmp/residual.json
+      - run: python -m belieflab certify-discounted examples/discounted-sensing.json --belief '[[1,2],[1,2]]' --horizon 3 > /tmp/certificate.json
+      - run: PYTHONPATH=. python examples/render_residual.py --check
