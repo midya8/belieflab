@@ -29,3 +29,7 @@ jobs:
       - run: python -m belieflab solve examples/sensing.json --belief '[[1,2],[1,2]]' --horizon 2 > /tmp/solve.json
       - run: python -m belieflab update examples/sensing.json --belief '[[1,2],[1,2]]' --action 2 --observation 0
       - run: PYTHONPATH=. python examples/render_audit.py --check
+      - run: python -m belieflab feedback-demo > /tmp/feedback.json
+      - run: python -m belieflab compare examples/sensing.json --belief '[[1,2],[1,2]]' --horizon 2 > /tmp/compare.json
+      - run: python -m belieflab open-loop examples/sensing.json --belief '[[1,2],[1,2]]' --horizon 2 > /tmp/open-loop.json
+      - run: PYTHONPATH=. python examples/render_feedback.py --check
