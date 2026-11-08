@@ -1,0 +1,31 @@
+name: ci
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m unittest discover -s tests -v
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python -m belieflab demo > /tmp/demo.json
+      - run: python -m belieflab solve examples/sensing.json --belief '[[1,2],[1,2]]' --horizon 2 > /tmp/solve.json
+      - run: python -m belieflab update examples/sensing.json --belief '[[1,2],[1,2]]' --action 2 --observation 0
+      - run: PYTHONPATH=. python examples/render_audit.py --check
