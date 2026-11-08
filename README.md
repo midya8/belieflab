@@ -124,17 +124,51 @@ PYTHONPATH=. python examples/render_policy.py --check
 
 The scope permits at most 15 decision histories and 16 terminal histories, not 15 actual visits in one execution. All 31 records are expected-occupancy witnesses, including zero-probability paths. These counts do not bound Fraction bit costs, time or RAM. `evaluate_policy` does not run a planner; `audit_policy` additionally uses the original candidate preflight and returns no partial audit if planning is refused.
 
+## From finite plans to a discounted infinite-value bracket
+
+![Exact signed Bellman residual bounds and the resulting infinite-horizon value bracket](assets/discounted-certificate.svg)
+
+`certify_discounted` adds an infinite-horizon **optimal-value bracket**, not an infinite-horizon policy. It requires discount strictly below one and a base horizon `H` in `0..3`. One planner call builds through `H+1`, reusing its exact layers. The extra backup is necessary: `T V_H = V_(H+1)` for the supplied belief Bellman operator. All original schema, rational, belief and candidate preflight guards apply. If that additional layer is refused, no partial certificate is returned. The original finite solver still accepts discount one; this certificate does not.
+
+The union of both envelopes' rational breakpoints partitions every initial belief. Every returned segment names the base and lookahead node witnesses, affine residual alpha, base/lookahead endpoint values and residual endpoints. Global minimum and maximum residuals, their **complete closed attaining components**, the residual sup norm and shifted bound endpoints are exact. Isolated extrema and flat intervals are retained. This is not a sampled belief-grid check.
+
+```text
+m = min_b (T V_H(b) - V_H(b))
+M = max_b (T V_H(b) - V_H(b))
+V_H(b) + m/(1-discount) <= V*(b) <= V_H(b) + M/(1-discount)
+abs(V*(b) - V_H(b)) <= max(abs(m),abs(M))/(1-discount)
+```
+
+These are global signed shifts, not the local residual at the input belief. The residual need not be convex or nonnegative. A prescribed constant reward `1/100` with discount `99/100` has horizon-zero residual `1/100`, but infinite value **1**. The raw residual is not a value-error certificate. A negative-reward control gives residual `-1/100` and exact infinite value `-1`, showing why the signed direction matters.
+
+A separate hidden-state fixture keeps the state fixed, makes probe perfectly revealing at cost `1/10`, leaves exploit observations uninformative and uses discount `1/2`. Its analytic infinite value is `max(2*abs(2*b-1),9/10)`: exploit forever, or probe once then exploit the revealed state. That maximum satisfies the full belief Bellman fixed-point equation. At uniform belief, the horizon-three value is `13/20`, global residual range is `[31/600,1/8]`, signed shifts are `[31/300,1/4]` and the certified infinite-value interval is `[113/150,9/10]`. The true infinite value is `9/10`. These are declared fixtures, not searched empirical performance results.
+
+```python
+from belieflab import certify_discounted
+# discounted_model must have discount <1, unlike the original sensing.json.
+certificate = certify_discounted(discounted_model, [[1,2],[1,2]], horizon=3)
+print(certificate['infinite_value_interval_at_input_belief'])
+```
+
+```sh
+python -m belieflab residual-demo
+python -m belieflab certify-discounted examples/discounted-sensing.json --belief '[[1,2],[1,2]]' --horizon 3
+PYTHONPATH=. python examples/render_residual.py --check
+```
+
+The lookahead tree still ends after `H+1` decisions. Neither it nor the base envelope is returned as an evaluated infinite-horizon controller. The certificate does not certify action optimality, finite-tree policy loss, learned-model validity or real-world safety. Horizons and candidate caps limit representation counts, not a requested convergence tolerance, Fraction bit complexity, time or RAM. [DESIGN.md](DESIGN.md) proves the signed bound using monotonicity, constant shifts and contraction.
+
 ## Strict input and resource preflight
 
 Model JSON is `{"version":1,"discount":rational,"actions":[...]}`. Every action has exactly `reward` (length two), `transition` (2x2) and `observation` (2x2). Every probability row and the length-two input belief sum exactly to one. Rationals are integers or `[numerator,positive denominator]`, never floats, booleans or decimal strings. Unknown/duplicate object keys, invalid shapes, negative probabilities and out-of-range indices fail explicitly. Rewards have absolute value <=100; raw rational components have magnitude <=1,000,000 with positive denominators. The LCM of normalized model and input-belief denominators must be <=1,000,000.
 
 Scope is two hidden states, two observations, 1..3 actions, discount in `[0,1]`, horizon 0..4 and zero terminal value. JSON files are capped at 256 KiB. Each layer preflights `actions * previous_retained_vectors**2` before allocating candidate vectors. `candidate_limit` is an integer in 1..4,096; the aggregate generated-candidate cap is 8,192, excluding the initial zero vector. If a layer would exceed either cap, the call raises an error identifying that layer, and returns no partial solution. Pruning can reduce the next layer's branching, but a supplied model is not promised to fit every requested horizon/limit.
 
-Counts describe candidate vectors and pruning categories. They are not the full unpruned policy-tree count, arithmetic operations, FLOPs, serialized bytes, wall time or RAM. Fraction integer sizes and full layer histories have costs not bounded by the candidate counter. No network, model download, paid API, GPU or dataset is needed. The eight-module wheel's demo matches source output outside the source tree.
+Counts describe candidate vectors and pruning categories. They are not the full unpruned policy-tree count, arithmetic operations, FLOPs, serialized bytes, wall time or RAM. Fraction integer sizes and full layer histories have costs not bounded by the candidate counter. No network, model download, paid API, GPU or dataset is needed. The ten-module wheel's demo matches source output outside the source tree.
 
 ## Independent checks
 
-70 tests retain the original 49 checks. These include 81 prescribed stochastic/sensing/cost/discount models with all 27 depth-two policy trees evaluated by an independent trajectory recursion: 2,187 policy-tree references. For each model, exact oracle alpha intersections partition the whole belief interval; endpoints and every cell midpoint verify envelope equality, rather than relying on a fixed belief grid. Every layer's retained alpha backup, child ID, interval coverage, endpoint value and count reconciliation is reconstructed. All root-action values and root ties are compared against the full oracle before pruning.
+86 tests retain all 70 prior checks. These include 81 prescribed stochastic/sensing/cost/discount models with all 27 depth-two policy trees evaluated by an independent trajectory recursion: 2,187 policy-tree references. For each model, exact oracle alpha intersections partition the whole belief interval; endpoints and every cell midpoint verify envelope equality, rather than relying on a fixed belief grid. Every layer's retained alpha backup, child ID, interval coverage, endpoint value and count reconciliation is reconstructed. All root-action values and root ties are compared against the full oracle before pruning.
 
 A second check enumerates all 2,187 depth-three policy trees for the sensing fixture, compares their values at the solver's boundaries plus 21 stated belief points, and checks an independent Bayesian belief recursion. This depth-three check is not claimed as an exhaustive all-belief intersection audit. Tests also cover the analytic sensing thresholds/posteriors/tree, horizon zero/four, impossible observations, transition-before-observation semantics, mixture identities, duplicate roots, exact tiny intersections, zero discount, constant negative rewards, independent per-layer/aggregate budget boundaries, preflight before backup, strict schemas/rational/simplex/LCM/CLI errors and input/output/RNG isolation. Four SVG tests check every exact envelope vertex and breakpoint, complete metadata, regeneration and rejection of an undisplayed changed layer.
 
@@ -142,6 +176,8 @@ Sixteen additional API/CLI tests compare all 729 fixed sequences across the same
 
 Seventeen new policy API/CLI tests evaluate all 2,187 depth-two trees across the 81 models against independent trajectory returns. Complete joint state/observation-path enumeration reconstructs every history mass, outcome probability, conditional belief, conditional reward and discounted contribution for all 27 trees under action-dependent stochastic dynamics, plus a full horizon-four policy trace. All 27 sensing-model trees' regret curves, witnesses, zero-regret components and maximum-regret components are checked against complete-tree oracle crossing cells. Separate tests cover an isolated optimality point for a tree discarded by envelope pruning, impossible histories, transition/reward timing, zero discount, equal-depth/size/schema/LCM guards, cyclic Python inputs, CLI caps/duplicate keys, preflight and isolation. Four more SVG tests verify all 15 table cells, both exact shared-scale optimality bands, full metadata, regeneration and rejection of changed undisplayed terminal data. Both previous SVGs and their tests remain unchanged.
 
-Finite-horizon policy-tree alpha-vector backups follow [MIT 6.0411/16.420, Fall 2023, L19: Solving POMDPs Offline](https://airr.mit.edu/_static/fall23/lectures/lec19/L19-POMDP-Offline.pdf). The two-state exact hull, schema, resource contract, code, fixture, independent oracles and all three figures are original. No external code or dataset is copied. [DESIGN.md](DESIGN.md) states the value-preservation and tie semantics. MIT licensed.
+Twelve new discounted-certificate API/CLI tests compare exact residual crossing cells against complete-tree oracles for 54 models, then check infinite-value bracket containment using independent Cramer-policy references for 81 revealing-observation models at four horizons and five stated beliefs. The latter is not an all-belief infinite-envelope audit. The separate analytic perfect-probe fixture is checked on every cell formed by all certificate and true-envelope knots, including its Bellman fixed-point equation. Signed positive/negative controls, zero discount, full attaining components, discount-one rejection, additional-layer preflight refusal, single planner call, schema/CLI and input/output/RNG isolation are checked. Four new SVG tests verify every shared-scale curve vertex, complete metadata, regeneration and undisplayed-fixture tampering. All three previous figures and their tests remain unchanged.
 
-Only the supplied finite model is solved. No transition/reward/observation learning, statistical calibration, more-than-two-state solver, arbitrary observation count, infinite-horizon guarantee, complete enumeration of tied policies or real-world control-safety claim is made. Exact arithmetic cannot validate whether the model describes the world.
+Finite-horizon policy-tree alpha-vector backups follow [MIT 6.0411/16.420, Fall 2023, L19: Solving POMDPs Offline](https://airr.mit.edu/_static/fall23/lectures/lec19/L19-POMDP-Offline.pdf). The two-state exact hull, schema, resource contract, code, fixture, independent oracles and all four figures are original. No external code or dataset is copied. [DESIGN.md](DESIGN.md) states the value-preservation and tie semantics. MIT licensed.
+
+Only the supplied finite model is solved. No transition/reward/observation learning, statistical calibration, more-than-two-state solver, arbitrary observation count, unrestricted infinite-horizon policy solver, complete enumeration of tied policies or real-world control-safety claim is made. Exact arithmetic cannot validate whether the model describes the world.
