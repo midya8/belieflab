@@ -33,3 +33,7 @@ jobs:
       - run: python -m belieflab compare examples/sensing.json --belief '[[1,2],[1,2]]' --horizon 2 > /tmp/compare.json
       - run: python -m belieflab open-loop examples/sensing.json --belief '[[1,2],[1,2]]' --horizon 2 > /tmp/open-loop.json
       - run: PYTHONPATH=. python examples/render_feedback.py --check
+      - run: python -m belieflab policy-demo > /tmp/policy.json
+      - run: python -m belieflab evaluate-policy examples/sensing.json --belief '[[1,2],[1,2]]' --policy examples/probe-policy.json > /tmp/evaluate-policy.json
+      - run: python -m belieflab audit-policy examples/sensing.json --belief '[[1,2],[1,2]]' --policy examples/probe-policy.json > /tmp/audit-policy.json
+      - run: PYTHONPATH=. python examples/render_policy.py --check
