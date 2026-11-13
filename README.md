@@ -1,10 +1,21 @@
 # BeliefLab
 
-Exact rational finite-horizon planning for supplied two-hidden-state, two-observation POMDPs. Dependency-free Python 3.10+, strict JSON CLI, policy-tree witnesses, Bayesian observation branches and an exact all-belief alpha-vector envelope. No learned model or belief-grid approximation.
+BeliefLab solves small supplied POMDPs with two hidden states and two possible
+observations. Exact rational policy trees show how observations change the next
+action. Compare the optimized feedback and fixed-sequence values, trace one fixed
+tree's probability/reward contributions, or bracket discounted infinite value.
+Python 3.10+, standard library only. No learned model or belief grid.
+
+| Question | Start here | Boundary |
+| --- | --- | --- |
+| When is it worth paying to observe? | [Sensing example](#a-two-action-sensing-example) | This is a supplied-model calculation, not a sensor benchmark. |
+| What does feedback add over a fixed action sequence? | [Optimized open-loop comparison](#optimized-open-loop-baseline-and-feedback-advantage) | Both optima use the same horizon, model, reward and costs. |
+| What return does one particular tree earn? | [Fixed-policy audit](#execute-the-policy-witness-as-an-exact-probability-audit) | Conditional branch rewards and unconditional contributions differ. |
+| How far is a finite value from the discounted optimum? | [Infinite-value bracket](#from-finite-plans-to-a-discounted-infinite-value-bracket) | The global residual bracket is not an infinite-horizon policy or action-optimality certificate. |
 
 ![Exact two-step value envelope and the value of a sensing action](assets/belief-audit.svg)
 
-## Pay for information, then act on it
+## A two-action sensing example
 
 ```sh
 python -m belieflab demo
