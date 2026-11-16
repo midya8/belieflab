@@ -40,3 +40,13 @@ jobs:
       - run: python -m belieflab residual-demo > /tmp/residual.json
       - run: python -m belieflab certify-discounted examples/discounted-sensing.json --belief '[[1,2],[1,2]]' --horizon 3 > /tmp/certificate.json
       - run: PYTHONPATH=. python examples/render_residual.py --check
+  installed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python examples/check_installed.py
