@@ -1,6 +1,6 @@
 # Belief planning
 
-BeliefLab solves small supplied POMDPs with two hidden states and two possible
+This implementation solves small supplied POMDPs with two hidden states and two possible
 observations. Exact rational policy trees show how observations change the next
 action. Compare the optimized feedback and fixed-sequence values, trace one fixed
 tree's probability/reward contributions, or bracket discounted infinite value.
@@ -52,7 +52,7 @@ alpha_new[s] = reward[a][s]
 
 At horizon zero the only vector is `[0,0]`, with no action or tree. Every subsequent layer returns retained alpha vectors, root actions, child IDs referring to the previous layer, exact belief intervals, interval endpoint values and complete candidate/pruning counts. The selected policy is also expanded into a plain observation-contingent tree. This is not a receding-horizon controller or an infinite-horizon convergence certificate.
 
-With two hidden states, each alpha vector is a line in the scalar belief b. BeliefLab sorts lines by slope and constructs their exact upper hull with rational intersections. It clips pieces to `[0,1]`. No numerical tolerance, belief grid or floating-point LP decides dominance.
+With two hidden states, each alpha vector is a line in the scalar belief b. Belief planning sorts lines by slope and constructs their exact upper hull with rational intersections. It clips pieces to `[0,1]`. No numerical tolerance, belief grid or floating-point LP decides dominance.
 
 **Values are preserved, not every tied policy tree.** Duplicate vectors retain the first generated tree; parallel dominated vectors, zero-width-only pieces and pieces outside the belief domain may be removed. At boundaries either adjacent retained tree attains the optimal value. `retained_maximizers` names only retained representatives and is not a complete policy-tree tie set. `root_action_values` and `optimal_root_actions` are computed separately from all final root candidates before pruning, so they preserve every optimal root action at the supplied belief, including duplicate-action ties. The selected tree uses the first retained maximizing representative; it need not be the lexicographically first tree among all original policies.
 
