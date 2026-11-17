@@ -1,4 +1,4 @@
-# BeliefLab
+# Belief planning
 
 BeliefLab solves small supplied POMDPs with two hidden states and two possible
 observations. Exact rational policy trees show how observations change the next
@@ -14,6 +14,9 @@ Python 3.10+, standard library only. No learned model or belief grid.
 | How far is a finite value from the discounted optimum? | [Infinite-value bracket](#from-finite-plans-to-a-discounted-infinite-value-bracket) | The global residual bracket is not an infinite-horizon policy or action-optimality certificate. |
 
 ![Exact two-step value envelope and the value of a sensing action](assets/belief-audit.svg)
+
+The repository is now `belief-planning`. The Python import and CLI names stay
+`belieflab` for compatibility with existing scripts.
 
 ## A two-action sensing example
 
